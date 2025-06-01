@@ -43,9 +43,9 @@
             transition: all 0.3s ease;
         }
         .tab-button.active {
-            background-color: #fff;
+            background-color: #007bff; /* Modrá */
+            color: white;
             border-bottom: 2px solid #007bff;
-            color: #007bff;
         }
         .tab-content {
             display: none; /* Skryje obsah záložek standardně */
@@ -55,7 +55,7 @@
             display: block; /* Zobrazí aktivní záložku */
         }
 
-        /* Styly pro první záložku (učení slovíček) */
+        /* Styly pro záložku Učení */
         .word-display {
             text-align: center;
             margin-top: 30px;
@@ -116,7 +116,7 @@
             color: #777;
         }
 
-        /* Styly pro input file */
+        /* Styly pro input file (záložka Nahrát) */
         .file-upload-section {
             margin-top: 20px;
             padding: 15px;
@@ -152,13 +152,67 @@
             font-style: italic;
             color: #555;
         }
+
+        /* Styly pro záložku Zakořenit */
+        #rootedWordsList {
+            list-style: none;
+            padding: 0;
+        }
+        #rootedWordsList li {
+            background-color: #f0f8ff;
+            border: 1px solid #cceeff;
+            padding: 10px 15px;
+            margin-bottom: 8px;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 1.1em;
+        }
+        #rootedWordsList li:nth-child(odd) {
+            background-color: #e6f7ff;
+        }
+        #rootedWordsList li span {
+            flex-grow: 1; /* Dovolí slovu zabrat dostupný prostor */
+        }
+        #rootedWordsList li button {
+            background-color: #dc3545; /* Červená */
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-left: 15px;
+            transition: background-color 0.2s ease;
+        }
+        #rootedWordsList li button:hover {
+            background-color: #c82333;
+        }
+        .export-button-container {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .export-button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+        .export-button:hover {
+            background-color: #0056b3;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="tabs">
             <button class="tab-button active" data-tab="tab1">Učení</button>
-            <button class="tab-button" data-tab="tab2">Seznamy</button>
+            <button class="tab-button" data-tab="tab2">Nahrát</button>
+            <button class="tab-button" data-tab="tab3">Zakořenit</button>
         </div>
 
         <div id="tab1" class="tab-content active">
@@ -178,21 +232,33 @@
             <div class="word-count" id="wordCount"></div>
             <p style="text-align: center; margin-top: 30px; font-size: 14px; color: #777;">
                 Použijte **šipky nahoru/dolů** na klávesnici pro pohyb mezi slovy.
-                <br>**Šipka doprava/doleva** pro zobrazení dalšího/předchozího sloupce.
+                <br>**Šipka doprava/doleva** pro zobrazení anglického/českého slova.
+                <br>**Enter** pro přidání slova do seznamu "Zakořenit".
             </p>
         </div>
 
         <div id="tab2" class="tab-content">
-            <h2>Moje seznamy slovíček</h2>
+            <h2>Nahrát nová slovíčka</h2>
             <p>
-                Zde si můžeš nahrát vlastní seznam slovíček z CSV souboru.
-                Každý řádek v CSV souboru by měl mít anglické slovíčko a pak čárku, a pak české slovíčko.
-                (Např.: `hello,ahoj`)
+                Zde si můžeš nahrát vlastní seznam slovíček z **poznámkového bloku (.txt)**.
+                <br>Každý řádek souboru by měl mít anglické slovíčko a pak **čárku**, a pak české slovíčko.
+                <br>Příklad: `father,táta`
+                <br>Nezapomeň soubor uložit v **kódování UTF-8**!
             </p>
             <div class="file-upload-section">
-                <input type="file" id="csvFileInput" accept=".txt">
-                <button id="loadCsvButton">Načíst slovíčka z CSV</button>
+                <input type="file" id="csvFileInput" accept=".txt,.csv">
+                <button id="loadCsvButton">Načíst slovíčka z TXT souboru</button>
                 <div id="uploadStatus" class="upload-status"></div>
+            </div>
+        </div>
+
+        <div id="tab3" class="tab-content">
+            <h2>Zakořeněná slovíčka</h2>
+            <p>Slovíčka, která jsi označil pro zapamatování.</p>
+            <ul id="rootedWordsList">
+                </ul>
+            <div class="export-button-container">
+                <button id="exportRootedWordsButton" class="export-button">Stáhnout jako TXT</button>
             </div>
         </div>
     </div>
@@ -200,26 +266,16 @@
     <script>
         // JavaScript: Logika aplikace
 
-        // 1. DATA: Tady jsou slovíčka (výchozí)
+        // 1. DATA
         let words = [
             { english: "hello", czech: "ahoj" },
             { english: "goodbye", czech: "nashledanou" },
-            { english: "thank you", czech: "děkuji" },
-            { english: "please", czech: "prosím" },
-            { english: "yes", czech: "ano" },
-            { english: "no", czech: "ne" },
-            { english: "cat", czech: "kočka" },
-            { english: "dog", czech: "pes" },
-            { english: "house", czech: "dům" },
-            { english: "car", czech: "auto" },
-            { english: "water", czech: "voda" },
-            { english: "food", czech: "jídlo" },
-            { english: "book", czech: "kniha" },
-            { english: "computer", czech: "počítač" },
-            { english: "time", czech: "čas" }
+            { english: "thank you", czech: "děkuji" }
         ];
 
-        let currentWordIndex = 0; // Index aktuálně zobrazeného slova
+        let rootedWords = []; // Nové pole pro "zakořeněná" slovíčka (objekty { english: "", czech: "" })
+
+        let currentWordIndex = 0; // Index aktuálně zobrazeného slova v `words`
         let currentColumnIndex = 1; // 0=ikona, 1=AJ slovo, 2=CZ slovo (zpočátku vidíme AJ slovo)
 
         // Prvky z HTML
@@ -237,12 +293,15 @@
         const loadCsvButton = document.getElementById('loadCsvButton');
         const uploadStatus = document.getElementById('uploadStatus');
 
+        const rootedWordsList = document.getElementById('rootedWordsList'); // Ul pro zobrazení zakořeněných slovíček
+        const exportRootedWordsButton = document.getElementById('exportRootedWordsButton');
+
 
         // Funkce pro zobrazení aktuálního slova a nastavení stavu sloupce
         function displayCurrentWord() {
             if (words.length === 0) {
-                englishWordDisplay.textContent = "Nahráno 0 slovíček.";
-                czechWordDisplay.textContent = "";
+                englishWordDisplay.textContent = "Žádná slovíčka k učení.";
+                czechWordDisplay.textContent = "Nahrajte soubor v záložce 'Nahrát'.";
                 wordCountDisplay.textContent = "0 / 0";
                 allCells.forEach(cell => cell.classList.remove('active-column')); // Skryje vše
                 return;
@@ -253,19 +312,14 @@
             czechWordDisplay.textContent = currentWord.czech;
             wordCountDisplay.textContent = `${currentWordIndex + 1} / ${words.length}`;
 
-            // Při změně slova, **zachováme currentColumnIndex**, ale aktualizujeme viditelnost
             updateColumnVisibility();
         }
 
         // Funkce pro aktualizaci viditelnosti sloupců a přečtení
         function updateColumnVisibility() {
-            // Skryj všechny buňky
             allCells.forEach(cell => cell.classList.remove('active-column'));
-
-            // Zobraz pouze aktivní buňku
             allCells[currentColumnIndex].classList.add('active-column');
 
-            // Pokud je aktivní 0. sloupec (ikona čtení), přečti slovo
             if (currentColumnIndex === 0 && words.length > 0) {
                 readEnglishWord(words[currentWordIndex].english);
             }
@@ -273,12 +327,70 @@
 
         // Funkce pro přečtení anglického slova
         function readEnglishWord(word) {
-            // Zruší jakékoli probíhající čtení, aby se nepřekrývalo
             speechSynthesis.cancel();
             const utterance = new SpeechSynthesisUtterance(word);
             utterance.lang = 'en-US'; // Angličtina
             speechSynthesis.speak(utterance);
         }
+
+        // Funkce pro přidání slova do "zakořeněných"
+        function addRootedWord(wordObj) {
+            // Zabrání duplikátům (pokud už slovo v seznamu je)
+            const exists = rootedWords.some(w => w.english === wordObj.english && w.czech === wordObj.czech);
+            if (!exists) {
+                rootedWords.push(wordObj);
+                renderRootedWords(); // Znovu vykreslí seznam zakořeněných slov
+                console.log("Slovo přidáno do zakořeněných:", wordObj);
+            } else {
+                console.log("Slovo už je v zakořeněných:", wordObj);
+            }
+        }
+
+        // Funkce pro vykreslení zakořeněných slovíček v záložce "Zakořenit"
+        function renderRootedWords() {
+            rootedWordsList.innerHTML = ''; // Vymaže stávající seznam
+            if (rootedWords.length === 0) {
+                rootedWordsList.innerHTML = '<li>Žádná slovíčka zatím nebyla označena jako "zakořeněná".</li>';
+                return;
+            }
+            rootedWords.forEach((word, index) => {
+                const listItem = document.createElement('li');
+                listItem.innerHTML = `
+                    <span>${word.english}, ${word.czech}</span>
+                    <button data-index="${index}">Odstranit</button>
+                `;
+                rootedWordsList.appendChild(listItem);
+            });
+        }
+
+        // Funkce pro odstranění slova ze "zakořeněných"
+        rootedWordsList.addEventListener('click', (event) => {
+            if (event.target.tagName === 'BUTTON') {
+                const indexToRemove = parseInt(event.target.dataset.index);
+                rootedWords.splice(indexToRemove, 1); // Odstraní prvek z pole
+                renderRootedWords(); // Znovu vykreslí seznam
+                console.log("Slovo odstraněno z zakořeněných.");
+            }
+        });
+
+        // Funkce pro export zakořeněných slovíček do TXT souboru
+        exportRootedWordsButton.addEventListener('click', () => {
+            if (rootedWords.length === 0) {
+                alert("Žádná slovíčka k exportu.");
+                return;
+            }
+            const textContent = rootedWords.map(word => `${word.english},${word.czech}`).join('\n');
+            const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'zakořeněná_slovíčka.txt';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url); // Uvolní URL objekt
+        });
+
 
         // LISTENERY (naslouchadla) pro tlačítka a klávesnici
 
@@ -286,32 +398,32 @@
         readCurrentWordIcon.addEventListener('click', () => {
             if (words.length > 0) {
                 readEnglishWord(words[currentWordIndex].english);
-                // Po kliknutí se přesuneme na ikonu, pokud tam uživatel nebyl
                 currentColumnIndex = 0;
                 updateColumnVisibility();
             }
         });
 
-        // 2. Pohyb šipkami na klávesnici
+        // 2. Pohyb šipkami a ENTER na klávesnici
         document.addEventListener('keydown', (event) => {
-            // Zkontroluj, jestli je aktivní první záložka ("Učení") a existují slovíčka
-            if (document.getElementById('tab1').classList.contains('active') && words.length > 0) {
+            // Zkontroluj, jestli je aktivní záložka "Učení"
+            if (document.getElementById('tab1').classList.contains('active')) {
+                if (words.length === 0) return; // Není co ovládat, pokud nejsou slovíčka
+
                 if (event.key === 'ArrowUp') {
-                    // Posunout se na předchozí slovo
                     currentWordIndex = Math.max(0, currentWordIndex - 1);
-                    displayCurrentWord(); // Zobrazí nové slovo a **zachová** sloupec
+                    displayCurrentWord();
                 } else if (event.key === 'ArrowDown') {
-                    // Posunout se na další slovo
                     currentWordIndex = Math.min(words.length - 1, currentWordIndex + 1);
-                    displayCurrentWord(); // Zobrazí nové slovo a **zachová** sloupec
+                    displayCurrentWord();
                 } else if (event.key === 'ArrowRight') {
-                    // Posunout se na další sloupec (0, 1, 2)
                     currentColumnIndex = Math.min(2, currentColumnIndex + 1);
                     updateColumnVisibility();
                 } else if (event.key === 'ArrowLeft') {
-                    // Posunout se na předchozí sloupec (0, 1, 2)
                     currentColumnIndex = Math.max(0, currentColumnIndex - 1);
                     updateColumnVisibility();
+                } else if (event.key === 'Enter') {
+                    // Přidat aktuální slovo do "zakořeněných"
+                    addRootedWord(words[currentWordIndex]);
                 }
             }
         });
@@ -333,15 +445,18 @@
                 // Při přepnutí na "Učení" záložku zobraz aktuální slovo
                 if (targetTab === 'tab1') {
                     displayCurrentWord();
+                } else if (targetTab === 'tab3') {
+                    // Při přepnutí na "Zakořenit" záložku vykreslí seznam
+                    renderRootedWords();
                 }
             });
         });
 
-        // 4. Logika pro nahrávání CSV souboru
+        // 4. Logika pro nahrávání TXT/CSV souboru
         loadCsvButton.addEventListener('click', () => {
             const file = csvFileInput.files[0];
             if (!file) {
-                uploadStatus.textContent = "Prosím, vyberte CSV soubor.";
+                uploadStatus.textContent = "Prosím, vyberte soubor .txt nebo .csv.";
                 uploadStatus.style.color = "orange";
                 return;
             }
@@ -359,16 +474,16 @@
                         displayCurrentWord(); // Zobrazíme první slovo z nového seznamu
                         uploadStatus.textContent = `Úspěšně načteno ${words.length} slovíček!`;
                         uploadStatus.style.color = "green";
-                        // Volitelně můžeš rovnou přepnout na záložku "Učení"
-                        // document.querySelector('.tab-button[data-tab="tab1"]').click();
+                        // Po úspěšném nahrání přepneme rovnou na záložku "Učení"
+                        document.querySelector('.tab-button[data-tab="tab1"]').click();
                     } else {
-                        uploadStatus.textContent = "CSV soubor neobsahuje platná slovíčka.";
+                        uploadStatus.textContent = "Soubor neobsahuje platná slovíčka nebo je špatný formát (anglické,české).";
                         uploadStatus.style.color = "red";
                     }
                 } catch (error) {
-                    uploadStatus.textContent = "Chyba při zpracování CSV souboru. Zkontrolujte formát.";
+                    uploadStatus.textContent = "Chyba při zpracování souboru. Zkontrolujte formát a kódování (UTF-8).";
                     uploadStatus.style.color = "red";
-                    console.error("CSV parse error:", error);
+                    console.error("Parse error:", error);
                 }
             };
 
@@ -380,25 +495,22 @@
             reader.readAsText(file); // Přečte soubor jako text
         });
 
-        // Funkce pro parsování CSV textu na pole objektů
+        // Funkce pro parsování textu na pole objektů (očekává čárku jako oddělovač)
         function parseCSV(text) {
-            const lines = text.split('\n').filter(line => line.trim() !== ''); // Rozdělí na řádky a odstraní prázdné
+            const lines = text.split('\n').filter(line => line.trim() !== '');
             const parsedData = [];
             lines.forEach(line => {
-                // Použijeme regulární výraz pro rozdělení podle čárky, která není uvnitř uvozovek
-                const parts = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                const parts = line.split(',');
                 if (parts.length >= 2) {
-                    // Ořezáváme mezery a případné uvozovky
-                    const english = parts[0].trim().replace(/^"|"$/g, '');
-                    const czech = parts[1].trim().replace(/^"|"$/g, '');
-                    if (english && czech) { // Přidáme jen platné páry
+                    const english = parts[0].trim();
+                    const czech = parts[1].trim();
+                    if (english && czech) {
                          parsedData.push({ english: english, czech: czech });
                     }
                 }
             });
             return parsedData;
         }
-
 
         // Při načtení stránky zobraz první slovo
         document.addEventListener('DOMContentLoaded', displayCurrentWord);
