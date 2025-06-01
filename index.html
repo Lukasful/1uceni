@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minimalistický Učící Zápisník</title>
+    <style>
+        /* CSS: Vzhled */
+        body {
+            font-family: sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 90vh;
+        }
+        .container {
+            width: 100%;
+            max-width: 700px;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        /* Styly pro záložky (taby) */
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #ddd;
+        }
+        .tab-button {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: none;
+            background-color: #eee;
+            border-bottom: 2px solid transparent;
+            font-size: 18px;
+            font-weight: bold;
+            color: #555;
+            transition: all 0.3s ease;
+        }
+        .tab-button.active {
+            background-color: #fff;
+            border-bottom: 2px solid #007bff;
+            color: #007bff;
+        }
+        .tab-content {
+            display: none; /* Skryje obsah záložek standardně */
+            padding-top: 10px;
+        }
+        .tab-content.active {
+            display: block; /* Zobrazí aktivní záložku */
+        }
+
+        /* Styly pro první záložku (učení slovíček) */
+        .word-display {
+            text-align: center;
+            margin-top: 30px;
+            margin-bottom: 20px;
+            min-height: 80px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .word-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+            background-color: #e9f7ff;
+            padding: 20px;
+            border-radius: 6px;
+            box-shadow: inset 0 0 5px rgba(0,0,0,0.05);
+            width: 100%;
+            max-width: 600px;
+            min-height: 100px;
+            overflow: hidden;
+            position: relative;
+        }
+        .word-cell {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+            width: 100%;
+            height: 100%;
+        }
+        .word-cell.active-column {
+             opacity: 1;
+             visibility: visible;
+        }
+
+        .read-icon {
+            cursor: pointer;
+            font-size: 30px;
+            color: #007bff;
+        }
+        .read-icon:hover {
+            color: #0056b3;
+        }
+        .word-count {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 16px;
+            color: #777;
+        }
+
+        /* Styly pro input file */
+        .file-upload-section {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px dashed #ccc;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+            text-align: center;
+        }
+        .file-upload-section input[type="file"] {
+            display: block;
+            margin: 10px auto;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #fff;
+            cursor: pointer;
+        }
+        .file-upload-section button {
+            padding: 10px 20px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+        .file-upload-section button:hover {
+            background-color: #218838;
+        }
+        .upload-status {
+            margin-top: 10px;
+            font-style: italic;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="tabs">
+            <button class="tab-button active" data-tab="tab1">Učení</button>
+            <button class="tab-button" data-tab="tab2">Seznamy</button>
+        </div>
+
+        <div id="tab1" class="tab-content active">
+            <div class="word-display">
+                <div class="word-row">
+                    <div class="word-cell" id="readIconCell">
+                        <span class="read-icon" id="readCurrentWordIcon">🔊</span>
+                    </div>
+                    <div class="word-cell" id="englishWordCell">
+                        <span id="englishWord"></span>
+                    </div>
+                    <div class="word-cell" id="czechWordCell">
+                        <span id="czechWord"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="word-count" id="wordCount"></div>
+            <p style="text-align: center; margin-top: 30px; font-size: 14px; color: #777;">
+                Použijte **šipky nahoru/dolů** na klávesnici pro pohyb mezi slovy.
+                <br>**Šipka doprava/doleva** pro zobrazení dalšího/předchozího sloupce.
+            </p>
+        </div>
+
+        <div id="tab2" class="tab-content">
+            <h2>Moje seznamy slovíček</h2>
+            <p>
+                Zde si můžeš nahrát vlastní seznam slovíček z CSV souboru.
+                Každý řádek v CSV souboru by měl mít anglické slovíčko a pak čárku, a pak české slovíčko.
+                (Např.: `hello,ahoj`)
+            </p>
+            <div class="file-upload-section">
+                <input type="file" id="csvFileInput" accept=".txt">
+                <button id="loadCsvButton">Načíst slovíčka z CSV</button>
+                <div id="uploadStatus" class="upload-status"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // JavaScript: Logika aplikace
+
+        // 1. DATA: Tady jsou slovíčka (výchozí)
+        let words = [
+            { english: "hello", czech: "ahoj" },
+            { english: "goodbye", czech: "nashledanou" },
+            { english: "thank you", czech: "děkuji" },
+            { english: "please", czech: "prosím" },
+            { english: "yes", czech: "ano" },
+            { english: "no", czech: "ne" },
+            { english: "cat", czech: "kočka" },
+            { english: "dog", czech: "pes" },
+            { english: "house", czech: "dům" },
+            { english: "car", czech: "auto" },
+            { english: "water", czech: "voda" },
+            { english: "food", czech: "jídlo" },
+            { english: "book", czech: "kniha" },
+            { english: "computer", czech: "počítač" },
+            { english: "time", czech: "čas" }
+        ];
+
+        let currentWordIndex = 0; // Index aktuálně zobrazeného slova
+        let currentColumnIndex = 1; // 0=ikona, 1=AJ slovo, 2=CZ slovo (zpočátku vidíme AJ slovo)
+
+        // Prvky z HTML
+        const englishWordDisplay = document.getElementById('englishWord');
+        const czechWordDisplay = document.getElementById('czechWord');
+        const wordCountDisplay = document.getElementById('wordCount');
+        const readCurrentWordIcon = document.getElementById('readCurrentWordIcon');
+
+        const readIconCell = document.getElementById('readIconCell');
+        const englishWordCell = document.getElementById('englishWordCell');
+        const czechWordCell = document.getElementById('czechWordCell');
+        const allCells = [readIconCell, englishWordCell, czechWordCell];
+
+        const csvFileInput = document.getElementById('csvFileInput');
+        const loadCsvButton = document.getElementById('loadCsvButton');
+        const uploadStatus = document.getElementById('uploadStatus');
+
+
+        // Funkce pro zobrazení aktuálního slova a nastavení stavu sloupce
+        function displayCurrentWord() {
+            if (words.length === 0) {
+                englishWordDisplay.textContent = "Nahráno 0 slovíček.";
+                czechWordDisplay.textContent = "";
+                wordCountDisplay.textContent = "0 / 0";
+                allCells.forEach(cell => cell.classList.remove('active-column')); // Skryje vše
+                return;
+            }
+            const currentWord = words[currentWordIndex];
+
+            englishWordDisplay.textContent = currentWord.english;
+            czechWordDisplay.textContent = currentWord.czech;
+            wordCountDisplay.textContent = `${currentWordIndex + 1} / ${words.length}`;
+
+            // Při změně slova, **zachováme currentColumnIndex**, ale aktualizujeme viditelnost
+            updateColumnVisibility();
+        }
+
+        // Funkce pro aktualizaci viditelnosti sloupců a přečtení
+        function updateColumnVisibility() {
+            // Skryj všechny buňky
+            allCells.forEach(cell => cell.classList.remove('active-column'));
+
+            // Zobraz pouze aktivní buňku
+            allCells[currentColumnIndex].classList.add('active-column');
+
+            // Pokud je aktivní 0. sloupec (ikona čtení), přečti slovo
+            if (currentColumnIndex === 0 && words.length > 0) {
+                readEnglishWord(words[currentWordIndex].english);
+            }
+        }
+
+        // Funkce pro přečtení anglického slova
+        function readEnglishWord(word) {
+            // Zruší jakékoli probíhající čtení, aby se nepřekrývalo
+            speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(word);
+            utterance.lang = 'en-US'; // Angličtina
+            speechSynthesis.speak(utterance);
+        }
+
+        // LISTENERY (naslouchadla) pro tlačítka a klávesnici
+
+        // 1. Kliknutí na ikonu přečtení
+        readCurrentWordIcon.addEventListener('click', () => {
+            if (words.length > 0) {
+                readEnglishWord(words[currentWordIndex].english);
+                // Po kliknutí se přesuneme na ikonu, pokud tam uživatel nebyl
+                currentColumnIndex = 0;
+                updateColumnVisibility();
+            }
+        });
+
+        // 2. Pohyb šipkami na klávesnici
+        document.addEventListener('keydown', (event) => {
+            // Zkontroluj, jestli je aktivní první záložka ("Učení") a existují slovíčka
+            if (document.getElementById('tab1').classList.contains('active') && words.length > 0) {
+                if (event.key === 'ArrowUp') {
+                    // Posunout se na předchozí slovo
+                    currentWordIndex = Math.max(0, currentWordIndex - 1);
+                    displayCurrentWord(); // Zobrazí nové slovo a **zachová** sloupec
+                } else if (event.key === 'ArrowDown') {
+                    // Posunout se na další slovo
+                    currentWordIndex = Math.min(words.length - 1, currentWordIndex + 1);
+                    displayCurrentWord(); // Zobrazí nové slovo a **zachová** sloupec
+                } else if (event.key === 'ArrowRight') {
+                    // Posunout se na další sloupec (0, 1, 2)
+                    currentColumnIndex = Math.min(2, currentColumnIndex + 1);
+                    updateColumnVisibility();
+                } else if (event.key === 'ArrowLeft') {
+                    // Posunout se na předchozí sloupec (0, 1, 2)
+                    currentColumnIndex = Math.max(0, currentColumnIndex - 1);
+                    updateColumnVisibility();
+                }
+            }
+        });
+
+        // 3. Logika pro přepínání záložek
+        const tabButtons = document.querySelectorAll('.tab-button');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const targetTab = button.dataset.tab;
+
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                tabContents.forEach(content => content.classList.remove('active'));
+
+                button.classList.add('active');
+                document.getElementById(targetTab).classList.add('active');
+
+                // Při přepnutí na "Učení" záložku zobraz aktuální slovo
+                if (targetTab === 'tab1') {
+                    displayCurrentWord();
+                }
+            });
+        });
+
+        // 4. Logika pro nahrávání CSV souboru
+        loadCsvButton.addEventListener('click', () => {
+            const file = csvFileInput.files[0];
+            if (!file) {
+                uploadStatus.textContent = "Prosím, vyberte CSV soubor.";
+                uploadStatus.style.color = "orange";
+                return;
+            }
+
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                const text = e.target.result;
+                try {
+                    const parsedWords = parseCSV(text);
+                    if (parsedWords.length > 0) {
+                        words = parsedWords; // Nahradíme stávající slovíčka novými
+                        currentWordIndex = 0; // Resetujeme index na začátek nového seznamu
+                        currentColumnIndex = 1; // Znovu nastavíme na anglické slovo
+                        displayCurrentWord(); // Zobrazíme první slovo z nového seznamu
+                        uploadStatus.textContent = `Úspěšně načteno ${words.length} slovíček!`;
+                        uploadStatus.style.color = "green";
+                        // Volitelně můžeš rovnou přepnout na záložku "Učení"
+                        // document.querySelector('.tab-button[data-tab="tab1"]').click();
+                    } else {
+                        uploadStatus.textContent = "CSV soubor neobsahuje platná slovíčka.";
+                        uploadStatus.style.color = "red";
+                    }
+                } catch (error) {
+                    uploadStatus.textContent = "Chyba při zpracování CSV souboru. Zkontrolujte formát.";
+                    uploadStatus.style.color = "red";
+                    console.error("CSV parse error:", error);
+                }
+            };
+
+            reader.onerror = function() {
+                uploadStatus.textContent = "Chyba při čtení souboru.";
+                uploadStatus.style.color = "red";
+            };
+
+            reader.readAsText(file); // Přečte soubor jako text
+        });
+
+        // Funkce pro parsování CSV textu na pole objektů
+        function parseCSV(text) {
+            const lines = text.split('\n').filter(line => line.trim() !== ''); // Rozdělí na řádky a odstraní prázdné
+            const parsedData = [];
+            lines.forEach(line => {
+                // Použijeme regulární výraz pro rozdělení podle čárky, která není uvnitř uvozovek
+                const parts = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                if (parts.length >= 2) {
+                    // Ořezáváme mezery a případné uvozovky
+                    const english = parts[0].trim().replace(/^"|"$/g, '');
+                    const czech = parts[1].trim().replace(/^"|"$/g, '');
+                    if (english && czech) { // Přidáme jen platné páry
+                         parsedData.push({ english: english, czech: czech });
+                    }
+                }
+            });
+            return parsedData;
+        }
+
+
+        // Při načtení stránky zobraz první slovo
+        document.addEventListener('DOMContentLoaded', displayCurrentWord);
+
+    </script>
+</body>
+</html>
