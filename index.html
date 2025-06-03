@@ -656,7 +656,13 @@
                 }
             }
         }, { passive: false }); // 'passive: false' je důležité pro možnost použít preventDefault()
-
+ 
+        wordRowElement.addEventListener('contextmenu', (e) => {
+            // Zajišťuje, že se to aplikuje jen na záložce "Učení"
+            if (document.getElementById('tab1').classList.contains('active')) {
+                e.preventDefault(); // Zabrání výchozímu chování prohlížeče
+            }
+        });
 
         // Při načtení stránky zobraz první slovo
         document.addEventListener('DOMContentLoaded', displayCurrentWord);
