@@ -81,7 +81,7 @@
             overflow: hidden;
             position: relative;
             /* Přidáno pro detekci dotyku */
-            touch-action: pan-y; /* Povolí vertikální scroll, ale ne horizontální gesta prohlížeče */
+            touch-action: none; /* Zamezí výchozímu chování prohlížeče pro touch */
             transition: background-color 0.3s ease; /* Plynulá změna barvy pozadí */
         }
         .word-cell {
@@ -402,14 +402,13 @@
             }
         }
 
-        // Funkce pro aktualizaci viditelnosti sloupců a přečtení
+        // Funkce pro aktualizaci viditelnosti sloupců
         function updateColumnVisibility() {
             allCells.forEach(cell => cell.classList.remove('active-column'));
             allCells[currentColumnIndex].classList.add('active-column');
-
-            if (currentColumnIndex === 0 && words.length > 0) {
-                readEnglishWord(words[currentWordIndex].english);
-            }
+            // Čtení slova po swipu je nyní řešeno přímo v touch/swipe handleru,
+            // aby se obešly problémy s automatickým spuštěním zvuku v prohlížečích.
+            // Čtení po kliknutí na ikonu nebo stisku šipky vlevo je řešeno v jejich listenerech.
         }
 
         // Funkce pro přečtení anglického slova
@@ -498,7 +497,7 @@
         readCurrentWordIcon.addEventListener('click', () => {
             if (words.length > 0) {
                 readEnglishWord(words[currentWordIndex].english);
-                currentColumnIndex = 0;
+                currentColumnIndex = 0; // Ujistí se, že je vizuálně zobrazen sloupec s ikonou
                 updateColumnVisibility();
             }
         });
@@ -521,6 +520,10 @@
                 } else if (event.key === 'ArrowLeft') {
                     currentColumnIndex = Math.max(0, currentColumnIndex - 1);
                     updateColumnVisibility();
+                    // Při návratu na sloupec 0 (ikona zvuku) se automaticky přečte slovo (pro klávesnici)
+                    if (currentColumnIndex === 0) {
+                        readEnglishWord(words[currentWordIndex].english);
+                    }
                 } else if (event.key === 'Enter') {
                     // Přidat aktuální slovo do "zakořeněných"
                     addRootedWord(words[currentWordIndex]);
@@ -624,6 +627,10 @@
             // Zajišťuje, že se gesta aplikují pouze na záložce "Učení"
             if (!document.getElementById('tab1').classList.contains('active')) return;
 
+            // Zabrání výchozímu chování (např. scrollování stránky), když dotyk začne
+            // Tím se umožní lepší detekce gest na elementu.
+            e.preventDefault();
+
             touchStartX = e.changedTouches[0].screenX;
             touchStartY = e.changedTouches[0].screenY;
             touchStartTime = Date.now();
@@ -642,60 +649,51 @@
             const elapsedTime = touchEndTime - touchStartTime;
 
             // Detekce dlouhého stisku (pro přidání do "zakořeněných")
+            // Zkontroluje, zda pohyb prstu byl minimální (pro odlišení od swipu)
             if (elapsedTime >= LONG_PRESS_THRESHOLD && Math.abs(deltaX) < 10 && Math.abs(deltaY) < 10) {
                 if (words.length > 0) {
                     addRootedWord(words[currentWordIndex]);
                 }
-                return;
+                return; // Po dlouhém stisku se už nebudou detekovat swipy
             }
 
-            // Detekce přejetí
+            // Detekce přejetí (swipe)
             if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > SWIPE_THRESHOLD) {
-                // Horizontální přejetí
-                if (deltaX > 0) {
-                    // Přejetí doprava (ArrowLeft)
-                    currentColumnIndex = Math.max(0, currentColumnIndex - 1);
-                    updateColumnVisibility();
-                } else {
-                    // Přejetí doleva (ArrowRight)
-                    currentColumnIndex = Math.min(2, currentColumnIndex + 1);
-                    updateColumnVisibility();
+                // Horizontální přejetí (zobrazení/skrytí překladu nebo ikony)
+                let newColumnIndex = currentColumnIndex;
+                if (deltaX > 0) { // Přejetí doprava (chci vidět předchozí sloupec)
+                    newColumnIndex = Math.max(0, currentColumnIndex - 1);
+                } else { // Přejetí doleva (chci vidět další sloupec)
+                    newColumnIndex = Math.min(2, currentColumnIndex + 1);
                 }
+
+                currentColumnIndex = newColumnIndex; // Aktualizuj index sloupce
+                updateColumnVisibility(); // Aktualizuj vizuální zobrazení
+
+                // Pokud se po swipu nacházíme na sloupci s ikonou zvuku, přečti slovo
+                if (currentColumnIndex === 0 && words.length > 0) {
+                    readEnglishWord(words[currentWordIndex].english);
+                }
+
             } else if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > SWIPE_THRESHOLD) {
-                // Vertikální přejetí - PROHOZENÁ LOGIKA
-                if (deltaY > 0) {
-                    // Přejetí dolů => nyní znamená posun NAHORU (ArrowUp)
+                // Vertikální přejetí (pohyb mezi slovy)
+                if (deltaY > 0) { // Přejetí dolů (chci předchozí slovo, tedy ArrowUp)
                     currentWordIndex = Math.max(0, currentWordIndex - 1);
-                    displayCurrentWord();
-                } else {
-                    // Přejetí nahoru => nyní znamená posun DOLŮ (ArrowDown)
+                } else { // Přejetí nahoru (chci další slovo, tedy ArrowDown)
                     currentWordIndex = Math.min(words.length - 1, currentWordIndex + 1);
-                    displayCurrentWord();
                 }
+                displayCurrentWord(); // Zobraz nové slovo
             }
         });
 
+        // Událost touchmove je důležitá pro plynulost swipu a blokování scrollování
         wordRowElement.addEventListener('touchmove', (e) => {
             if (document.getElementById('tab1').classList.contains('active')) {
-                const deltaX = Math.abs(e.changedTouches[0].screenX - touchStartX);
-                const deltaY = Math.abs(e.changedTouches[0].screenY - touchStartY);
-
-                // Zablokuj výchozí chování (scrollování) jen pokud se zdá,
-                // že jde o horizontální swipe (primárně se hýbeme do stran)
-                // nebo pokud je pohyb malý a může vést k dlouhému stisku.
-                // Toto by mělo dovolit vertikální swipe pro slova.
-                if (deltaX > deltaY && deltaX > 5) {
-                    // Jde o horizontální swipe, zabraň výchozímu scrollování (strana)
-                    e.preventDefault();
-                } else if (deltaY > deltaX && deltaY > 5) {
-                    // Jde o vertikální swipe, zabraň výchozímu scrollování (nahoru/dolu),
-                    // protože to řešíme vlastním posunem slov.
-                    e.preventDefault();
-                }
-                // Pokud je pohyb velmi malý, neblokuj nic,
-                // aby nedošlo k ovlivnění detekce dlouhého stisku.
+                // PreventDefault zde bude zamezovat výchozímu scrollování prohlížeče
+                // tím, že říkáme, že událost zpracováváme sami.
+                e.preventDefault();
             }
-        }, { passive: false }); // 'passive: false' je nutné pro e.preventDefault()
+        }, { passive: false }); // 'passive: false' je zásadní pro funkčnost e.preventDefault()
 
         // Zamezení zobrazení kontextového menu/výběru textu při dlouhém stisku na mobilu
         wordRowElement.addEventListener('contextmenu', (e) => {
