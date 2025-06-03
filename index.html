@@ -632,14 +632,14 @@
                     updateColumnVisibility();
                 }
             } else if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > SWIPE_THRESHOLD) {
-                // Vertikální přejetí
+                // Vertikální přejetí - ZDE JE ZMĚNA
                 if (deltaY > 0) {
-                    // Přejetí dolů (ArrowDown)
-                    currentWordIndex = Math.min(words.length - 1, currentWordIndex + 1);
+                    // Přejetí dolů => nyní bude znamenat posun NAHORU (ArrowUp)
+                    currentWordIndex = Math.max(0, currentWordIndex - 1);
                     displayCurrentWord();
                 } else {
-                    // Přejetí nahoru (ArrowUp)
-                    currentWordIndex = Math.max(0, currentWordIndex - 1);
+                    // Přejetí nahoru => nyní bude znamenat posun DOLŮ (ArrowDown)
+                    currentWordIndex = Math.min(words.length - 1, currentWordIndex + 1);
                     displayCurrentWord();
                 }
             }
