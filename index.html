@@ -82,6 +82,7 @@
             position: relative;
             /* Přidáno pro detekci dotyku */
             touch-action: pan-y; /* Povolí vertikální scroll, ale ne horizontální gesta prohlížeče */
+            transition: background-color 0.3s ease; /* Plynulá změna barvy pozadí */
         }
         .word-cell {
             position: absolute;
@@ -102,6 +103,13 @@
              opacity: 1;
              visibility: visible;
         }
+
+        /* Nový CSS styl pro zakořeněné slovo */
+        .word-row.rooted {
+            background-color: #d4edda; /* Světle zelená, pro indikaci "zakořeněno" */
+            border: 1px solid #28a745;
+        }
+
 
         .read-icon {
             cursor: pointer;
@@ -328,7 +336,7 @@
             { english: "slept", czech: "spal" },
             { english: "spoke", czech: "mluvil" },
             { english: "spent", czech: "strávil" },
-            { english: "stood", czech: "stál" },
+            { english : "stood", czech: "stál" },
             { english: "swam", czech: "plaval" },
             { english: "took", czech: "vzal" },
             { english: "taught", czech: "učil" },
@@ -342,7 +350,7 @@
             { english: "thank you", czech: "děkuji" }
         ];
 
-        let rootedWords = []; // Nové pole pro "zakořeněná" slovíčka (objekty { english: "", czech: "" })
+        let rootedWords = []; // Pole pro "zakořeněná" slovíčka (objekty { english: "", czech: "" })
 
         let currentWordIndex = 0; // Index aktuálně zobrazeného slova v `words`
         let currentColumnIndex = 1; // 0=ikona, 1=AJ slovo, 2=CZ slovo (zpočátku vidíme AJ slovo)
@@ -374,6 +382,7 @@
                 czechWordDisplay.textContent = "Nahrajte soubor v záložce 'Nahrát'.";
                 wordCountDisplay.textContent = "0 / 0";
                 allCells.forEach(cell => cell.classList.remove('active-column')); // Skryje vše
+                wordRowElement.classList.remove('rooted'); // Odebere barvu, pokud nejsou slova
                 return;
             }
             const currentWord = words[currentWordIndex];
@@ -383,6 +392,14 @@
             wordCountDisplay.textContent = `${currentWordIndex + 1} / ${words.length}`;
 
             updateColumnVisibility();
+
+            // Kontrola, zda je aktuální slovo v rootedWords a změna barvy
+            const isRooted = rootedWords.some(w => w.english === currentWord.english && w.czech === currentWord.czech);
+            if (isRooted) {
+                wordRowElement.classList.add('rooted');
+            } else {
+                wordRowElement.classList.remove('rooted');
+            }
         }
 
         // Funkce pro aktualizaci viditelnosti sloupců a přečtení
@@ -411,6 +428,10 @@
                 rootedWords.push(wordObj);
                 renderRootedWords(); // Znovu vykreslí seznam zakořeněných slov
                 console.log("Slovo přidáno do zakořeněných:", wordObj);
+                // Okamžitá změna barvy, pokud je slovo právě zobrazeno
+                if (words[currentWordIndex].english === wordObj.english && words[currentWordIndex].czech === wordObj.czech) {
+                    wordRowElement.classList.add('rooted');
+                }
             } else {
                 console.log("Slovo už je v zakořeněných:", wordObj);
             }
@@ -437,9 +458,18 @@
         rootedWordsList.addEventListener('click', (event) => {
             if (event.target.tagName === 'BUTTON') {
                 const indexToRemove = parseInt(event.target.dataset.index);
+                const removedWord = rootedWords[indexToRemove]; // Uložíme si odstraněné slovo
+
                 rootedWords.splice(indexToRemove, 1); // Odstraní prvek z pole
                 renderRootedWords(); // Znovu vykreslí seznam
-                console.log("Slovo odstraněno z zakořeněných.");
+                console.log("Slovo odstraněno z zakořeněných:", removedWord);
+
+                // Zkontrolujeme, zda odstraněné slovo je aktuálně zobrazeno a odebereme mu barvu
+                if (words.length > 0 &&
+                    words[currentWordIndex].english === removedWord.english &&
+                    words[currentWordIndex].czech === removedWord.czech) {
+                    wordRowElement.classList.remove('rooted');
+                }
             }
         });
 
@@ -582,7 +612,7 @@
             return parsedData;
         }
 
-        // --- Nová logika pro dotykové ovládání (swipes) ---
+        // --- Logika pro dotykové ovládání (swipes) ---
         let touchStartX = 0;
         let touchStartY = 0;
         let touchEndTime = 0;
@@ -632,20 +662,19 @@
                     updateColumnVisibility();
                 }
             } else if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > SWIPE_THRESHOLD) {
-                // Vertikální přejetí
+                // Vertikální přejetí - PROHOZENÁ LOGIKA
                 if (deltaY > 0) {
-                    // Přejetí dolů (ArrowDown)
-                    currentWordIndex = Math.min(words.length - 1, currentWordIndex + 1);
+                    // Přejetí dolů => nyní znamená posun NAHORU (ArrowUp)
+                    currentWordIndex = Math.max(0, currentWordIndex - 1);
                     displayCurrentWord();
                 } else {
-                    // Přejetí nahoru (ArrowUp)
-                    currentWordIndex = Math.max(0, currentWordIndex - 1);
+                    // Přejetí nahoru => nyní znamená posun DOLŮ (ArrowDown)
+                    currentWordIndex = Math.min(words.length - 1, currentWordIndex + 1);
                     displayCurrentWord();
                 }
             }
         });
 
-        // Zamezení defaultního chování prohlížeče při dotyku (např. scroll)
         wordRowElement.addEventListener('touchmove', (e) => {
             if (document.getElementById('tab1').classList.contains('active')) {
                 // Zamezí vertikálnímu scrollování, pokud se detekuje horizontální swipe
@@ -655,8 +684,15 @@
                     e.preventDefault();
                 }
             }
-        }, { passive: false }); // 'passive: false' je důležité pro možnost použít preventDefault()
+        }, { passive: false });
 
+        // Zamezení zobrazení kontextového menu/výběru textu při dlouhém stisku na mobilu
+        wordRowElement.addEventListener('contextmenu', (e) => {
+            // Zajišťuje, že se to aplikuje jen na záložce "Učení"
+            if (document.getElementById('tab1').classList.contains('active')) {
+                e.preventDefault(); // Zabrání výchozímu chování prohlížeče
+            }
+        });
 
         // Při načtení stránky zobraz první slovo
         document.addEventListener('DOMContentLoaded', displayCurrentWord);
