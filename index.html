@@ -677,14 +677,25 @@
 
         wordRowElement.addEventListener('touchmove', (e) => {
             if (document.getElementById('tab1').classList.contains('active')) {
-                // Zamezí vertikálnímu scrollování, pokud se detekuje horizontální swipe
                 const deltaX = Math.abs(e.changedTouches[0].screenX - touchStartX);
                 const deltaY = Math.abs(e.changedTouches[0].screenY - touchStartY);
-                if (deltaX > deltaY && deltaX > 5) { // Malá tolerance pro detekci horizontálního tahu
+
+                // Zablokuj výchozí chování (scrollování) jen pokud se zdá,
+                // že jde o horizontální swipe (primárně se hýbeme do stran)
+                // nebo pokud je pohyb malý a může vést k dlouhému stisku.
+                // Toto by mělo dovolit vertikální swipe pro slova.
+                if (deltaX > deltaY && deltaX > 5) {
+                    // Jde o horizontální swipe, zabraň výchozímu scrollování (strana)
+                    e.preventDefault();
+                } else if (deltaY > deltaX && deltaY > 5) {
+                    // Jde o vertikální swipe, zabraň výchozímu scrollování (nahoru/dolu),
+                    // protože to řešíme vlastním posunem slov.
                     e.preventDefault();
                 }
+                // Pokud je pohyb velmi malý, neblokuj nic,
+                // aby nedošlo k ovlivnění detekce dlouhého stisku.
             }
-        }, { passive: false });
+        }, { passive: false }); // 'passive: false' je nutné pro e.preventDefault()
 
         // Zamezení zobrazení kontextového menu/výběru textu při dlouhém stisku na mobilu
         wordRowElement.addEventListener('contextmenu', (e) => {
