@@ -632,14 +632,14 @@
                     updateColumnVisibility();
                 }
             } else if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > SWIPE_THRESHOLD) {
-                // Vertikální přejetí - ZDE JE ZMĚNA
+                // Vertikální přejetí
                 if (deltaY > 0) {
-                    // Přejetí dolů => nyní bude znamenat posun NAHORU (ArrowUp)
-                    currentWordIndex = Math.max(0, currentWordIndex - 1);
+                    // Přejetí dolů (ArrowDown)
+                    currentWordIndex = Math.min(words.length - 1, currentWordIndex + 1);
                     displayCurrentWord();
                 } else {
-                    // Přejetí nahoru => nyní bude znamenat posun DOLŮ (ArrowDown)
-                    currentWordIndex = Math.min(words.length - 1, currentWordIndex + 1);
+                    // Přejetí nahoru (ArrowUp)
+                    currentWordIndex = Math.max(0, currentWordIndex - 1);
                     displayCurrentWord();
                 }
             }
@@ -656,13 +656,7 @@
                 }
             }
         }, { passive: false }); // 'passive: false' je důležité pro možnost použít preventDefault()
- 
-        wordRowElement.addEventListener('contextmenu', (e) => {
-            // Zajišťuje, že se to aplikuje jen na záložce "Učení"
-            if (document.getElementById('tab1').classList.contains('active')) {
-                e.preventDefault(); // Zabrání výchozímu chování prohlížeče
-            }
-        });
+
 
         // Při načtení stránky zobraz první slovo
         document.addEventListener('DOMContentLoaded', displayCurrentWord);
