@@ -624,15 +624,6 @@
             // Zajišťuje, že se gesta aplikují pouze na záložce "Učení"
             if (!document.getElementById('tab1').classList.contains('active')) return;
 
-            touchStartX = e.changedTouches[0].screenX;
-            touchStartY = e.changedTouches[0].screenY;
-            touchStartTime = Date.now();
-        });
-
-        wordRowElement.addEventListener('touchend', (e) => {
-            // Zajišťuje, že se gesta aplikují pouze na záložce "Učení"
-            if (!document.getElementById('tab1').classList.contains('active')) return;
-
             touchEndTime = Date.now();
             const touchEndX = e.changedTouches[0].screenX;
             const touchEndY = e.changedTouches[0].screenY;
@@ -652,15 +643,21 @@
             // Detekce přejetí
             if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > SWIPE_THRESHOLD) {
                 // Horizontální přejetí
+                let newColumnIndex = currentColumnIndex; // Předpokládaný nový index sloupce
                 if (deltaX > 0) {
                     // Přejetí doprava (ArrowLeft)
-                    currentColumnIndex = Math.max(0, currentColumnIndex - 1);
-                    updateColumnVisibility();
+                    newColumnIndex = Math.max(0, currentColumnIndex - 1);
                 } else {
                     // Přejetí doleva (ArrowRight)
-                    currentColumnIndex = Math.min(2, currentColumnIndex + 1);
-                    updateColumnVisibility();
+                    newColumnIndex = Math.min(2, currentColumnIndex + 1);
                 }
+
+                // Pokud se cílí na sloupec ikony (index 0) a slova existují, přečti
+                if (newColumnIndex === 0 && words.length > 0) {
+                    readEnglishWord(words[currentWordIndex].english);
+                }
+                currentColumnIndex = newColumnIndex; // Aktualizuj sloupec
+                updateColumnVisibility(); // Aktualizuj viditelnost
             } else if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > SWIPE_THRESHOLD) {
                 // Vertikální přejetí - PROHOZENÁ LOGIKA
                 if (deltaY > 0) {
