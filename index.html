@@ -80,6 +80,8 @@
             min-height: 100px;
             overflow: hidden;
             position: relative;
+            /* Přidáno pro detekci dotyku */
+            touch-action: pan-y; /* Povolí vertikální scroll, ale ne horizontální gesta prohlížeče */
         }
         .word-cell {
             position: absolute;
@@ -234,6 +236,8 @@
                 Použijte **šipky nahoru/dolů** na klávesnici pro pohyb mezi slovy.
                 <br>**Šipka doprava/doleva** pro zobrazení anglického/českého slova.
                 <br>**Enter** pro přidání slova do seznamu "Zakořenit".
+                <br>Na mobilu: **Přejeďte prstem** pro pohyb mezi slovy a zobrazení překladu.
+                <br>**Dlouhý stisk (long press)** pro přidání slova do seznamu "Zakořenit".
             </p>
         </div>
 
@@ -353,6 +357,7 @@
         const englishWordCell = document.getElementById('englishWordCell');
         const czechWordCell = document.getElementById('czechWordCell');
         const allCells = [readIconCell, englishWordCell, czechWordCell];
+        const wordRowElement = document.querySelector('.word-row'); // Element pro detekci dotyků
 
         const csvFileInput = document.getElementById('csvFileInput');
         const loadCsvButton = document.getElementById('loadCsvButton');
@@ -570,12 +575,88 @@
                     const english = parts[0].trim();
                     const czech = parts[1].trim();
                     if (english && czech) {
-                         parsedData.push({ english: english, czech: czech });
+                            parsedData.push({ english: english, czech: czech });
                     }
                 }
             });
             return parsedData;
         }
+
+        // --- Nová logika pro dotykové ovládání (swipes) ---
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let touchEndTime = 0;
+        let touchStartTime = 0;
+        const SWIPE_THRESHOLD = 50; // Minimální vzdálenost pro detekci přejetí
+        const LONG_PRESS_THRESHOLD = 500; // Milisekundy pro dlouhý stisk
+
+        wordRowElement.addEventListener('touchstart', (e) => {
+            // Zajišťuje, že se gesta aplikují pouze na záložce "Učení"
+            if (!document.getElementById('tab1').classList.contains('active')) return;
+
+            touchStartX = e.changedTouches[0].screenX;
+            touchStartY = e.changedTouches[0].screenY;
+            touchStartTime = Date.now();
+        });
+
+        wordRowElement.addEventListener('touchend', (e) => {
+            // Zajišťuje, že se gesta aplikují pouze na záložce "Učení"
+            if (!document.getElementById('tab1').classList.contains('active')) return;
+
+            touchEndTime = Date.now();
+            const touchEndX = e.changedTouches[0].screenX;
+            const touchEndY = e.changedTouches[0].screenY;
+
+            const deltaX = touchEndX - touchStartX;
+            const deltaY = touchEndY - touchStartY;
+            const elapsedTime = touchEndTime - touchStartTime;
+
+            // Detekce dlouhého stisku (pro přidání do "zakořeněných")
+            if (elapsedTime >= LONG_PRESS_THRESHOLD && Math.abs(deltaX) < 10 && Math.abs(deltaY) < 10) {
+                if (words.length > 0) {
+                    addRootedWord(words[currentWordIndex]);
+                }
+                return;
+            }
+
+            // Detekce přejetí
+            if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > SWIPE_THRESHOLD) {
+                // Horizontální přejetí
+                if (deltaX > 0) {
+                    // Přejetí doprava (ArrowLeft)
+                    currentColumnIndex = Math.max(0, currentColumnIndex - 1);
+                    updateColumnVisibility();
+                } else {
+                    // Přejetí doleva (ArrowRight)
+                    currentColumnIndex = Math.min(2, currentColumnIndex + 1);
+                    updateColumnVisibility();
+                }
+            } else if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > SWIPE_THRESHOLD) {
+                // Vertikální přejetí
+                if (deltaY > 0) {
+                    // Přejetí dolů (ArrowDown)
+                    currentWordIndex = Math.min(words.length - 1, currentWordIndex + 1);
+                    displayCurrentWord();
+                } else {
+                    // Přejetí nahoru (ArrowUp)
+                    currentWordIndex = Math.max(0, currentWordIndex - 1);
+                    displayCurrentWord();
+                }
+            }
+        });
+
+        // Zamezení defaultního chování prohlížeče při dotyku (např. scroll)
+        wordRowElement.addEventListener('touchmove', (e) => {
+            if (document.getElementById('tab1').classList.contains('active')) {
+                // Zamezí vertikálnímu scrollování, pokud se detekuje horizontální swipe
+                const deltaX = Math.abs(e.changedTouches[0].screenX - touchStartX);
+                const deltaY = Math.abs(e.changedTouches[0].screenY - touchStartY);
+                if (deltaX > deltaY && deltaX > 5) { // Malá tolerance pro detekci horizontálního tahu
+                    e.preventDefault();
+                }
+            }
+        }, { passive: false }); // 'passive: false' je důležité pro možnost použít preventDefault()
+
 
         // Při načtení stránky zobraz první slovo
         document.addEventListener('DOMContentLoaded', displayCurrentWord);
