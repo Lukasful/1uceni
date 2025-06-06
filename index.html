@@ -270,6 +270,7 @@
             <ul id="rootedWordsList">
                 </ul>
             <div class="export-button-container">
+                <button id="shuffleRootedWordsButton" class="export-button" style="margin-right: 10px;">Zamíchat slovíčka</button>
                 <button id="exportRootedWordsButton" class="export-button">Stáhnout jako TXT</button>
             </div>
         </div>
@@ -905,6 +906,8 @@
 
         const rootedWordsList = document.getElementById('rootedWordsList'); // Ul pro zobrazení zakořeněných slovíček
         const exportRootedWordsButton = document.getElementById('exportRootedWordsButton');
+        const shuffleRootedWordsButton = document.getElementById('shuffleRootedWordsButton'); 
+
 
 
         // Funkce pro zobrazení aktuálního slova a nastavení stavu sloupce
@@ -968,7 +971,12 @@
                 console.log("Slovo už je v zakořeněných:", wordObj);
             }
         }
-
+            function shuffleArray(array) { // TUTO FUNKCI PŘIDEJTE
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]]; // Prohodí prvky
+            }
+        }
         // Funkce pro vykreslení zakořeněných slovíček v záložce "Zakořenit"
         function renderRootedWords() {
             rootedWordsList.innerHTML = ''; // Vymaže stávající seznam
@@ -1022,7 +1030,15 @@
             document.body.removeChild(a);
             URL.revokeObjectURL(url); // Uvolní URL objekt
         });
-
+             shuffleRootedWordsButton.addEventListener('click', () => { // TENTO POSLUCHAČ PŘIDEJTE
+            if (rootedWords.length === 0) {
+                alert("Nejsou žádná slovíčka k zamíchání!");
+                return;
+            }
+            shuffleArray(rootedWords); // Zamíchá pole rootedWords
+            renderRootedWords();      // Znovu vykreslí seznam, aby se projevilo nové pořadí
+            alert("Slovíčka v seznamu 'Zakořenit' byla zamíchána!");
+        });
 
         // LISTENERY (naslouchadla) pro tlačítka a klávesnici
 
