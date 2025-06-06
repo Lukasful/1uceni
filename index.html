@@ -240,6 +240,10 @@
                 </div>
             </div>
             <div class="word-count" id="wordCount"></div>
+
+            <div class="shuffle-main-button-container" style="text-align: center; margin-top: 20px;">
+                <button id="shuffleWordsMainButton" class="export-button">Zamíchat všechna slovíčka</button>
+            </div>
             <p style="text-align: center; margin-top: 30px; font-size: 14px; color: #777;">
                 Použijte **šipky nahoru/dolů** na klávesnici pro pohyb mezi slovy.
                 <br>**Šipka doprava/doleva** pro zobrazení anglického/českého slova.
@@ -907,6 +911,7 @@
         const rootedWordsList = document.getElementById('rootedWordsList'); // Ul pro zobrazení zakořeněných slovíček
         const exportRootedWordsButton = document.getElementById('exportRootedWordsButton');
         const shuffleRootedWordsButton = document.getElementById('shuffleRootedWordsButton'); 
+        const shuffleWordsMainButton = document.getElementById('shuffleWordsMainButton'); 
 
 
 
@@ -1038,6 +1043,18 @@
             shuffleArray(rootedWords); // Zamíchá pole rootedWords
             renderRootedWords();      // Znovu vykreslí seznam, aby se projevilo nové pořadí
             alert("Slovíčka v seznamu 'Zakořenit' byla zamíchána!");
+        });
+
+        shuffleWordsMainButton.addEventListener('click', () => {
+            if (words.length === 0) {
+                alert("Nejsou žádná slovíčka k zamíchání!");
+                return;
+            }
+            shuffleArray(words); // Zde voláme funkci shuffleArray pro hlavní pole 'words'
+            currentWordIndex = 0; // Resetujeme index na začátek po zamíchání
+            currentColumnIndex = 1; // Znovu nastaví na anglické slovo (aby se začalo s prvním slovem a jeho AJ verzí)
+            displayCurrentWord(); // Zobrazí první slovo z nově zamíchaného seznamu
+            alert("Všechna slovíčka byla zamíchána!");
         });
 
         // LISTENERY (naslouchadla) pro tlačítka a klávesnici
